@@ -8,6 +8,7 @@ import v.util
 import v.ast
 import v.vmod
 import v.checker
+import v.optimizer
 import v.transformer
 import v.parser
 import v.markused
@@ -21,6 +22,7 @@ pub:
 	module_path  string
 pub mut:
 	checker             &checker.Checker
+	optimizer           &optimizer.Optimizer
 	transformer         &transformer.Transformer
 	out_name_c          string
 	out_name_js         string
@@ -69,6 +71,7 @@ pub fn new_builder(pref &pref.Preferences) Builder {
 		pref: pref
 		table: table
 		checker: checker.new_checker(table, pref)
+		optimizer: optimizer.new_optimizer(table)
 		transformer: transformer.new_transformer_with_table(table, pref)
 		compiled_dir: compiled_dir
 		cached_msvc: msvc
@@ -109,6 +112,11 @@ pub fn (mut b Builder) middle_stages() ? {
 	if b.pref.check_only {
 		return error_with_code('stop_after_checker', 9999)
 	}
+
+	util.timing_start('OPTIMIZATION')
+	b.optimizer.optimize_files(b.parsed_files)
+	util.timing_measure('OPTIMIZATION')
+
 	util.timing_start('TRANSFORM')
 	b.transformer.transform_files(b.parsed_files)
 	util.timing_measure('TRANSFORM')
