@@ -180,10 +180,29 @@ pub fn (mut c Checker) check_expected_call_arg(got ast.Type, expected_ ast.Type,
 			return
 		}
 	}
+	got_str := c.table.type_to_str(got)
+	got_sym := c.table.sym(got)
+	exp_sym := c.table.sym(expected)
+	exp_str := c.table.type_to_str(expected)
 	if c.check_types(got, expected) {
-		if language != .v || expected.is_ptr() == got.is_ptr() || arg.is_mut
-			|| arg.expr.is_auto_deref_var() || got.has_flag(.shared_f)
-			|| c.table.sym(expected_).kind !in [.array, .map] {
+
+		if language != .v {
+			return
+		}
+
+		if expected.is_ptr() == got.is_ptr() {
+			return
+		}
+
+		if arg.is_mut || arg.expr.is_auto_deref_var() {
+			return
+		}
+
+		if exp_sym.kind == .voidptr || got_sym.kind == .voidptr {
+			return
+		}
+
+		if exp_sym.kind !in [.array, .map, .struct_, .interface_, .sum_type, .function] {
 			return
 		}
 	}
@@ -195,7 +214,6 @@ pub fn (mut c Checker) check_expected_call_arg(got ast.Type, expected_ ast.Type,
 	got_typ_str := c.table.type_to_str(got.clear_flag(.variadic))
 	expected_typ_sym := c.table.sym(expected_)
 	expected_typ_str := c.table.type_to_str(expected.clear_flag(.variadic))
-
 	if got_typ_sym.symbol_name_except_generic() == expected_typ_sym.symbol_name_except_generic() {
 		// Check if we are making a comparison between two different types of
 		// the same type like `Type<int> and &Type<>`

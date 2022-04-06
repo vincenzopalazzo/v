@@ -1,0 +1,4 @@
+vlib/v/tests/known_errors/testdata/c_err_with_def.vv:61:22: error: cannot use `Vector` as `&Vector` in argument 1 to `acceleration`
+   59 | mut object := Vector{4,3}
+   60 |
+   61 | println(acceleration(Vector{0,0}, object, 5))
