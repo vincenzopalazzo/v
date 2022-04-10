@@ -1,0 +1,15 @@
+struct Just<T> {
+  value T
+}
+
+struct Nothing<T> {}
+
+// wrong declaration, must declare
+// generic type
+type Maybe = Nothing | Just
+
+fn test_fn() {
+	// when we run in script mode V,
+	// without use the declaration
+	// we can have some cgen
+}
