@@ -1,6 +1,6 @@
 module datatypes
 
-// Color enumeration to make the code more readble
+// Color enumeration
 enum Color {
 	red
 	black
@@ -131,7 +131,88 @@ pub fn (mut rbt RBTree<T>) contains(value T) bool {
 
 // remove remove an element from the bst if present.
 pub fn (mut rbt RBTree<T>) remove(value T) bool {
+	if rbt.is_empty() {
+		return false
+	}
 	return false
+}
+
+fn (mut rbt RBTree<T>) remove_helper(mut node RBTreeNode<T>, value T) bool {
+	if !node.is_init {
+		return false
+	}
+
+	mut target := rbt.get_node(node, value)
+	mut new_node := new_rbt_none_node<T>(false)
+	mut target_color := target.color
+	if !target.left.is_init {
+		new_node = target.right
+		rbt.transplant(mut target, mut target.right)
+	} else if !target.right.is_init {
+		new_node = target.left
+		rbt.transplant(mut target, mut target.left)
+	} else {
+		// placeholder, find the minimum
+		mut local_min := rbt.get_min(target.right)
+		target_color = local_min.color
+		if local_min.parent == target {
+			new_node.parent = target
+		} else {
+			rbt.transplant(mut local_min, mut local_min.right)
+			local_min.right = target.right
+			local_min.right.parent = local_min
+		}
+		rbt.transplant(mut target, mut local_min)
+		local_min.left = target.left
+		local_min.left.parent = local_min
+		local_min.color = target.color
+	}
+	if target_color == .black {
+		// TODO: fixup the tree propriety
+	}
+	return true
+}
+
+// transpant reorganize the subtree when the parent is deleted
+fn (mut rbt RBTree<T>) transplant(mut node_u RBTreeNode<T>, mut node_v RBTreeNode<T>) bool {
+	if !node_u.parent.is_init {
+		// remove the root
+		rbt.root = node_v
+		return true
+	}
+
+	if node_u == node_u.parent.left {
+		node_u.parent.left = node_v
+	} else if node_u == node_u.parent.right {
+		node_u.parent.right = node_v
+	}
+	// FIXME: we need to manually free node_u?
+	node_v.parent = node_u.parent
+	return true
+}
+
+// fixup restore the red black tree proprieties.
+//
+// RB-Proprieties:
+// Case 1:
+// Case 2:
+// Case 3:
+// Case 4:
+fn (mut rbt RBTree<T>) fixup(mut node RBTreeNode<T>) bool {
+	mut target := node
+	for target != rbt.root && target.color == .black {
+		if target == target.parent.left {
+			mut target_right := target.parent.right
+			// case 1
+			if target_right.color == .red {
+				target_right.color = .black
+				target.parent.color = .red
+				rbt.left_rotate(mut target.parent)
+				target_right = target.parent.right
+			}
+		}
+	}
+	return true
 }
 
 // get retreival the object that has the value in the rb tree,
@@ -142,6 +223,14 @@ pub fn (rbt &RBTree<T>) get(value T) ?&T {
 		return none
 	}
 	return &node.value
+}
+
+// get_min return the leaf node to the left of the node as parameter
+fn (rbt &RBTree<T>) get_min(node &RBTreeNode<T>) &RBTreeNode<T> {
+	if node.is_init {
+		return node
+	}
+	return rbt.get_min(node.left)
 }
 
 // get_node helper function to get the node with the value in the rbt.
