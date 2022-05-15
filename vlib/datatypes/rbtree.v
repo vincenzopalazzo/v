@@ -24,9 +24,7 @@ fn new_rbt_root_node<T>(value T, color Color) &RBTreeNode<T> {
 		is_init: true
 		value: value
 		color: color
-		parent: new_rbt_none_node<T>(true)
-		left: new_rbt_none_node<T>(true)
-		right: new_rbt_none_node<T>(true)
+		parent: new_rbt_none_node<T>(false)
 	}
 }
 
@@ -35,7 +33,8 @@ fn new_rbt_node<T>(parent &RBTreeNode<T>, value T) &RBTreeNode<T> {
 	return &RBTreeNode<T>{
 		is_init: true
 		value: value
-		parent: parant
+		parent: parent
+		color: .red
 	}
 }
 
@@ -43,6 +42,7 @@ fn new_rbt_node<T>(parent &RBTreeNode<T>, value T) &RBTreeNode<T> {
 fn new_rbt_none_node<T>(init bool) &RBTreeNode<T> {
 	return &RBTreeNode<T>{
 		is_init: init
+		color: .red
 	}
 }
 
@@ -60,14 +60,12 @@ fn (node &RBTreeNode<T>) is_red() bool {
 	return node.color == .red
 }
 
-// can_rotate_to_left check if the node can be rotated to the left
-fn (node &RBTreeNode<T>) can_rotate_to_left() bool {
-	return node.right.is_red() && !node.left.is_red()
+fn (node &RBTreeNode<T>) is_left_red() bool {
+	return node.is_init && node.left.is_init && node.left.is_red()
 }
 
-// can_rotate_to_right check if the node can be rotate to the right
-fn (node &RBTreeNode<T>) can_rotate_to_right() bool {
-	return node.left.is_red() && !node.right.is_red()
+fn (node &RBTreeNode<T>) is_right_red() bool {
+	return node.is_init && node.right.is_init && node.right.is_red()
 }
 
 // Pure Red-Black Tree implementation
@@ -91,36 +89,59 @@ pub fn (mut rbt RBTree<T>) insert(value T) bool {
 		rbt.root = new_rbt_root_node(value, .red)
 		return true
 	}
-	mut root := rbt.insert_helper(mut rbt.root, value)
-	root.color = .black
-	return true
+	result := rbt.insert_helper(mut rbt.root, value)
+	if result {
+		rbt.root.color = .black
+		return result
+	}
+	return false
 }
 
-fn (mut rbt RBTree<T>) insert_helper(mut node RBTreeNode<T>, value T) &RBTreeNode<T> {
-	if node.is_init {
-		return new_rbt_root_node(value, .red)
+fn (mut rbt RBTree<T>) insert_helper(mut node RBTreeNode<T>, value T) bool {
+	mut root := node
+	mut target := new_rbt_none_node<T>(false)
+	for node.is_init {
+		unsafe {
+			*target = root
+			if value < root.value {
+				root = root.left
+			} else {
+				root = root.right
+			}
+		}
 	}
-
-	if node.value < value {
-		node.left = rbt.insert_helper(mut node.left, value)
-	} else if node.value > value {
-		node.right = rbt.insert_helper(mut node.right, value)
+	mut node_value := new_rbt_node<T>(target, value)
+	if !target.is_init {
+		rbt.root = node_value
+	} else if node_value.value < target.value {
+		target.left = node_value
 	} else {
-		node.value = value
+		target.right = node_value
 	}
 
-	// rebalance the tree after the insert
-	if node.can_rotate_to_left() {
-		node = rbt.left_rotate(mut node)
-	} else {
-		node = rbt.right_rotate(mut node)
+	if node_value.parent == 0 || !node_value.is_init {
+		node_value.color = .red
+		return true
 	}
 
-	if node.left.is_red() && node.right.is_red() {
-		rbt.flip_color(mut node)
+	if node_value.parent.parent == 0 || !node_value.is_init {
+		return true
 	}
 
-	return node
+	// FIXME: check the parent if is non
+	// FIXME: check the parent of the parent if is none
+	return rbt.insert_fixup(mut node_value)
+}
+
+fn (mut rbt RBTree<T>) insert_fixup(mut node RBTreeNode<T>) bool {
+	for node.parent.is_red() {
+		if node.parent == node.parent.parent.left {
+			targert_right := node.parent.parent.right
+		} else {
+			target_left := node.parent.parent.left
+		}
+	}
+	return true
 }
 
 // contains check is a value is present inside the rb tree.
@@ -134,7 +155,7 @@ pub fn (mut rbt RBTree<T>) remove(value T) bool {
 	if rbt.is_empty() {
 		return false
 	}
-	return false
+	return rbt.remove_helper(mut rbt.root, value)
 }
 
 fn (mut rbt RBTree<T>) remove_helper(mut node RBTreeNode<T>, value T) bool {
@@ -143,6 +164,9 @@ fn (mut rbt RBTree<T>) remove_helper(mut node RBTreeNode<T>, value T) bool {
 	}
 
 	mut target := rbt.get_node(node, value)
+	if !target.is_init {
+		return false
+	}
 	mut new_node := new_rbt_none_node<T>(false)
 	mut target_color := target.color
 	if !target.left.is_init {
@@ -303,7 +327,11 @@ fn (rbt &RBTree<T>) color_flip(mut node RBTreeNode<T>) {
 //
 // Sometimes during the insertion operation we may end up having
 // a node with two red links connecting to its children.
-fn (mut rbt RBTree<T>) flip_color(mut node RBTreeNode<T>) {}
+fn (mut rbt RBTree<T>) flip_color(mut node RBTreeNode<T>) {
+	node.color = .red
+	node.left.color = .black
+	node.right.color = .black
+}
 
 // is_empty return true is the rb tree is empty
 pub fn (rbt &RBTree<T>) is_empty() bool {
