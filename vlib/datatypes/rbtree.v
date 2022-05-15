@@ -168,7 +168,7 @@ fn (mut rbt RBTree<T>) remove_helper(mut node RBTreeNode<T>, value T) bool {
 		local_min.color = target.color
 	}
 	if target_color == .black {
-		// TODO: fixup the tree propriety
+		return rbt.fixup(mut new_node)
 	}
 	return true
 }
@@ -194,25 +194,51 @@ fn (mut rbt RBTree<T>) transplant(mut node_u RBTreeNode<T>, mut node_v RBTreeNod
 // fixup restore the red black tree proprieties.
 //
 // RB-Proprieties:
-// Case 1:
-// Case 2:
-// Case 3:
-// Case 4:
+// Case 1: TODO
+// Case 2: TODO
+// Case 3: TODO
+// Case 4: TODO
 fn (mut rbt RBTree<T>) fixup(mut node RBTreeNode<T>) bool {
 	mut target := node
 	for target != rbt.root && target.color == .black {
+		// we panic in this case and it is totally fine,
+		// because should be a not expected error, but
+		// for the first release cycle we keep this as "sanity check"
 		if target == target.parent.left {
 			mut target_right := target.parent.right
-			// case 1
-			if target_right.color == .red {
-				target_right.color = .black
-				target.parent.color = .red
-				rbt.left_rotate(mut target.parent)
-				target_right = target.parent.right
-			}
+			target = *rbt.fixup_branch(mut target, mut target_right) or { panic(err) }
+		} else {
+			mut target_left := target.parent.left
+			target = *rbt.fixup_branch(mut target, mut target_left) or { panic(err) }
 		}
 	}
 	return true
+}
+
+// TODO: add well documentation because will be tricky for other to catch some bugs in the future
+fn (mut rbt RBTree<T>) fixup_branch(mut parent RBTreeNode<T>, mut node RBTreeNode<T>) !&RBTreeNode<T> {
+	// case 1
+	if node.color == .red {
+		node.color = .black
+		parent.parent.color = .red
+		rbt.left_rotate(mut parent.parent)
+		return parent.parent.right
+	}
+	if !node.left.is_red() && !node.right.is_red() {
+		// case 2
+		node.color = .red
+		return parent.parent
+	} else if !node.is_red() {
+		// case 3
+		node.left.color = .black
+		node.color = .red
+		rbt.right_rotate(mut node)
+		node.color = parent.parent.color
+		node.right.color = .black
+		rbt.left_rotate(mut parent.parent)
+		return rbt.root
+	}
+	return error('implementation error uring the balance procedure, please report the bug')
 }
 
 // get retreival the object that has the value in the rb tree,
