@@ -1847,6 +1847,23 @@ pub fn (expr Expr) is_auto_deref_var() bool {
 	return false
 }
 
+pub fn (expr Expr) is_mut_var() bool {
+	match expr {
+		Ident {
+			if expr.obj is Var {
+				return expr.obj.is_mut
+			}
+		}
+		PrefixExpr {
+			if expr.op == .amp && expr.right.is_mut_var() {
+				return true
+			}
+		}
+		else {}
+	}
+	return false
+}
+
 // returns if an expression can be used in `lock x, y.z {`
 pub fn (e &Expr) is_lockable() bool {
 	match e {

@@ -88,7 +88,7 @@ fn (mut g Gen) infix_expr_eq_op(node ast.InfixExpr) {
 	has_defined_eq_operator := g.table.has_method(left.sym, '==')
 	has_alias_eq_op_overload := left.sym.info is ast.Alias && left.sym.has_method('==')
 	if (left.typ.is_ptr() && right.typ.is_int()) || (right.typ.is_ptr() && left.typ.is_int()) {
-		g.gen_plain_infix_expr(node)
+		g.gen_plain_infix_expr_eq(node)
 	} else if (left.typ.idx() == ast.string_type_idx || (!has_defined_eq_operator
 		&& left.unaliased.idx() == ast.string_type_idx)) && node.right is ast.StringLiteral
 		&& (node.right as ast.StringLiteral).val == '' {
@@ -822,8 +822,19 @@ fn (mut g Gen) infix_expr_and_or_op(node ast.InfixExpr) {
 // It handles auto dereferencing of variables, as well as automatic casting
 // (see Gen.expr_with_cast for more details)
 fn (mut g Gen) gen_plain_infix_expr(node ast.InfixExpr) {
-	if node.left_type.is_ptr() && node.left.is_auto_deref_var() {
-		g.write('*')
+	if node.left_type.is_ptr() && node.left.is_auto_deref_var() && !node.left.is_mut_var() {
+		g.write('/*plan infix expr*/*')
+	}
+	g.expr(node.left)
+	g.write(' $node.op.str() ')
+	g.expr_with_cast(node.right, node.right_type, node.left_type)
+}
+
+/// get_plain_infix_expr_eq generates basic code for eq expression, where is
+/// necessary to avoid to referencing a mutable node because there is no sense
+fn (mut g Gen) gen_plain_infix_expr_eq(node ast.InfixExpr) {
+	if node.left_type.is_ptr() && node.left.is_auto_deref_var() && !node.left.is_mut_var() {
+		g.write('/*plan infix expr*/*')
 	}
 	g.expr(node.left)
 	g.write(' $node.op.str() ')

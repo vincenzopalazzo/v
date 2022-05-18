@@ -1,0 +1,19 @@
+struct Foo {
+pub mut:
+	internal &Foo = 0
+}
+
+fn insert_helper(mut node Foo) string {
+	if node == 0 {
+		println('is_undefined')
+		return 'is undefined'
+	} else {
+		return 'defined'
+	}
+}
+
+fn main() {
+	mut foo := Foo{}
+	assert insert_helper(mut foo) == 'defined'
+	assert insert_helper(mut foo.internal) == 'is undefined'
+}
